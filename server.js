@@ -6,7 +6,7 @@ var env     = require('node-env-file'),
     CartoDB = require('cartodb')
 
 // Read env configs
-env(__dirname + '/.env')
+//env(__dirname + '/.env')
 
 var CARTODB_TABLE            = 'blackfridayparking',
     INSTAGRAM_QUERY_ENDPOINT = 'https://api.instagram.com/v1/tags/blackfridayparking/media/recent?client_id='
