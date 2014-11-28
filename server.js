@@ -37,11 +37,12 @@ client.on('connect', function () {
         // Only keep geocoded posts
         if (!gram.location) continue
 
-        var cartoSQL = "INSERT INTO {table} (the_geom, identifier, percent_full, source, source_created_at, url, username) VALUES ({geo},'{identifier}',{percent_full},'instagram',to_timestamp({source_created_at}),'{url}','{username}')"
+        var cartoSQL = "INSERT INTO {table} (the_geom, description, identifier, percent_full, source, source_created_at, url, username) VALUES ({geo},'{description}','{identifier}',{percent_full},'instagram',to_timestamp({source_created_at}),'{url}','{username}')"
 
         client.query(cartoSQL, {
           table: CARTODB_TABLE,
           geo: 'ST_SetSRID(ST_Point('+gram.location.longitude+','+gram.location.latitude+'),4326)',
+          description: gram.caption.text,
           identifier: gram.id,
           percent_full: getPercentFromText(gram.caption.text),
           source_created_at: gram.created_time,
@@ -87,11 +88,12 @@ client.on('connect', function () {
         // NOTE: sometimes the points come back as [0,0] which CartoDB will issue an error on
         console.log('[Twitter]', JSON.stringify(tweet.coordinates))
 
-        var cartoSQL = "INSERT INTO {table} (the_geom, identifier, percent_full, source, source_created_at, username) VALUES ({geo},'{identifier}',{percent_full},'twitter','{source_created_at}','{username}')"
+        var cartoSQL = "INSERT INTO {table} (the_geom, description, identifier, percent_full, source, source_created_at, username) VALUES ({geo},'{description}',''{identifier}',{percent_full},'twitter','{source_created_at}','{username}')"
 
         client.query(cartoSQL, {
           table: CARTODB_TABLE,
           geo: 'ST_SetSRID(ST_Point('+tweet.coordinates.coordinates[0]+','+tweet.coordinates.coordinates[1]+'),4326)',
+          description: tweet.text,
           identifier: tweet.id_str,
           percent_full: getPercentFromText(tweet.text),
           source_created_at: tweet.created_at,
