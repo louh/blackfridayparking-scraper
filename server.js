@@ -37,12 +37,13 @@ client.on('connect', function () {
         // Only keep geocoded posts
         if (!gram.location) continue
 
-        var cartoSQL = "INSERT INTO {table} (the_geom, identifier, source, source_created_at, url, username) VALUES ({geo},'{identifier}','instagram',to_timestamp({source_created_at}),'{url}','{username}')"
+        var cartoSQL = "INSERT INTO {table} (the_geom, identifier, percent_full, source, source_created_at, url, username) VALUES ({geo},'{identifier}',{percent_full},'instagram',to_timestamp({source_created_at}),'{url}','{username}')"
 
         client.query(cartoSQL, {
           table: CARTODB_TABLE,
           geo: 'ST_SetSRID(ST_Point('+gram.location.longitude+','+gram.location.latitude+'),4326)',
           identifier: gram.id,
+          percent_full: getPercentFromText(gram.caption.text),
           source_created_at: gram.created_time,
           url: gram.link,
           username: gram.user.username
@@ -86,12 +87,13 @@ client.on('connect', function () {
         // NOTE: sometimes the points come back as [0,0] which CartoDB will issue an error on
         console.log('[Twitter]', JSON.stringify(tweet.coordinates))
 
-        var cartoSQL = "INSERT INTO {table} (the_geom, identifier, source, source_created_at, username) VALUES ({geo},'{identifier}','twitter','{source_created_at}','{username}')"
+        var cartoSQL = "INSERT INTO {table} (the_geom, identifier, percent_full, source, source_created_at, username) VALUES ({geo},'{identifier}',{percent_full},'twitter','{source_created_at}','{username}')"
 
         client.query(cartoSQL, {
           table: CARTODB_TABLE,
           geo: 'ST_SetSRID(ST_Point('+tweet.coordinates.coordinates[0]+','+tweet.coordinates.coordinates[1]+'),4326)',
           identifier: tweet.id_str,
+          percent_full: getPercentFromText(tweet.text),
           source_created_at: tweet.created_at,
           username: tweet.user.screen_name
         }, function (err, data) {
@@ -112,6 +114,12 @@ client.on('connect', function () {
 
 client.connect()
 
+function getPercentFromText (text) {
+  if (!text) return null
+  var percent = text.match(/[0-9]*%/)
+  if (percent && percent.length >= 1) return parseInt(percent[0])
+  else return null
+}
 
 
 // WTF Twitter
