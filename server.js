@@ -1,15 +1,14 @@
-'use strict';
+'use strict'
 
-var env     = require('node-env-file'),
-    request = require('superagent'),
-    btoa    = require('btoa'),
-    CartoDB = require('cartodb')
+var env = require('node-env-file')
+var request = require('superagent')
+var CartoDB = require('cartodb')
 
 // Read env configs
-//env(__dirname + '/.env')
+env(__dirname + '/.env')
 
-var CARTODB_TABLE            = 'blackfridayparking',
-    INSTAGRAM_QUERY_ENDPOINT = 'https://api.instagram.com/v1/tags/blackfridayparking/media/recent?client_id='
+var CARTODB_TABLE = process.env.CARTODB_TABLE
+var INSTAGRAM_QUERY_ENDPOINT = 'https://api.instagram.com/v1/tags/blackfridayparking/media/recent?client_id='
 
 var client = new CartoDB({
   user: 'lou',
@@ -122,22 +121,3 @@ function getPercentFromText (text) {
   if (percent && percent.length >= 1) return parseInt(percent[0])
   else return 'null'
 }
-
-
-// WTF Twitter
-// curl -u API_KEY:SECRET_KEY -d grant_type=client_credentials https://api.twitter.com/oauth2/token
-/*
-var token = btoa(process.env.TWITTER_API_KEY + ':' + process.env.TWITTER_SECRET_KEY)
-request
-  .post('https://api.twitter.com/oauth2/token')
-  .set('Authorization', 'Basic ' + token)
-  .set('Content-Type', 'application/x-www-form-urlencoded;charset=UTF-8')
-  .send('grant_type=client_credentials')
-  .end(function (err, res) {
-    if (err) {
-      console.error('Error @ POST request!', err)
-    }
-
-    console.log(res.body)
-  })
-*/

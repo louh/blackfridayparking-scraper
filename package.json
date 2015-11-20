@@ -1,6 +1,6 @@
 {
   "name": "blackfridayparking-scraper",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Lou Huang",
   "description": "",
   "license": "MIT",
@@ -9,9 +9,8 @@
     "start": "node server"
   },
   "dependencies": {
-    "btoa": "^1.1.2",
-    "cartodb": "^0.2.0",
-    "node-env-file": "^0.1.4",
-    "superagent": "^0.21.0"
+    "cartodb": "^0.2.1",
+    "node-env-file": "^0.1.8",
+    "superagent": "^1.4.0"
   }
 }
