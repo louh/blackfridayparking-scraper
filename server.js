@@ -10,6 +10,8 @@ env(__dirname + '/.env')
 var CARTODB_TABLE = process.env.CARTODB_TABLE
 var INSTAGRAM_QUERY_ENDPOINT = 'https://api.instagram.com/v1/tags/blackfridayparking/media/recent?client_id='
 
+var START_TIME = getStartTime(process.env.START_TIME)
+
 var client = new CartoDB({
   user: 'lou',
   api_key: process.env.CARTODB_API_KEY
@@ -33,8 +35,12 @@ client.on('connect', function () {
       for (var i = 0; i < data.length; i++) {
         var gram = data[i]
 
+        // Only keep posts made after START_TIME
+        if (gram.created_time < START_TIME) continue
+
         // Only keep geocoded posts
         if (!gram.location) continue
+
 
         var cartoSQL = "INSERT INTO {table} (the_geom, description, identifier, percent_full, source, source_created_at, url, username) VALUES ({geo},'{description}','{identifier}',{percent_full},'instagram',to_timestamp({source_created_at}),'{url}','{username}')"
 
@@ -120,4 +126,11 @@ function getPercentFromText (text) {
   var percent = text.match(/[0-9]*%/)
   if (percent && percent.length >= 1) return parseInt(percent[0])
   else return 'null'
+}
+
+// Returns time in unix timestamp format given a string
+// 'November 20, 2015' -> 1447995600
+function getStartTime (string) {
+  var time = new Date(string)
+  return Math.floor(time.valueOf() / 1000)
 }
