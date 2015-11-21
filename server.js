@@ -82,47 +82,7 @@ client.on('connect', function () {
       // console.log(JSON.stringify(data))
 
       for (var i = 0; i < data.length; i++) {
-        var tweet = data[i]
-        var geo
-
-        // Only keep posts with an image
-        if (!tweet.entities.media) continue
-
-        // There are different types of coordinates.
-        // A place is associated with the tweet and returns a bounding box.
-        // This is less exact. Do we even want this?
-        if (tweet.place) {
-          console.log('[Twitter] Place found, but skipping')
-        }
-        if (tweet.coordinates) {
-          geo = 'ST_SetSRID(ST_Point(' + tweet.coordinates.coordinates[0] + ',' + tweet.coordinates.coordinates[1] + '),4326)'
-        }
-        // There is a tweet.geo field but it is deprecated.
-
-        // Do not proceed if there is not a point
-        if (!geo) continue
-
-        // NOTE: sometimes the points come back as [0,0] which CartoDB will issue an error on
-        console.log('[Twitter]', JSON.stringify(tweet.coordinates))
-
-        var cartoSQL = "INSERT INTO {table} (the_geom, description, identifier, percent_full, source, source_created_at, username) VALUES ({geo},'{description}','{identifier}',{percent_full},'twitter','{source_created_at}','{username}')"
-
-        client.query(cartoSQL, {
-          table: CARTODB_TABLE,
-          geo: geo,
-          description: tweet.text.replace(/'/g, "''"),
-          identifier: tweet.id_str,
-          percent_full: getPercentFromText(tweet.text),
-          source_created_at: tweet.created_at,
-          username: tweet.user.screen_name
-        }, function (err, data) {
-          if (err) {
-            // 'identifier' is a UNIQUE column, so errors will occur if you add the same one
-            // console.log('[CartoDB] error performing SQL query:', err)
-          } else if (data.total_rows) {
-            console.log('[Twitter] ' + data.total_rows + ' rows affected')
-          }
-        })
+        parseAndInsertTwitterData(data[i])
       }
 
       console.log('[Twitter] Done.')
@@ -158,4 +118,64 @@ function getPercentFromText (text) {
 function getStartTime (string) {
   var time = new Date(string)
   return Math.floor(time.valueOf() / 1000)
+}
+
+function parseAndInsertTwitterData (tweet) {
+  var box, lng, lat, address, location, geo
+
+  // Skip retweets
+  if (tweet.retweeted_status) return
+
+  // Only keep posts with an image
+  if (!tweet.entities.media) return
+
+  // There are different types of coordinates.
+  // A place is associated with the tweet and returns a bounding box.
+  // This is less exact, but use it if we have it because
+  // users can select locations to associate with, while not
+  // allowing their clients to return exact locations.
+  if (tweet.place && tweet.place.bounding_box && tweet.place.bounding_box.type === 'Polygon') {
+    // We can only have one type of geometry in a column so
+    // convert the polygon into a centroid point of the bounding box.
+    box = tweet.place.bounding_box.coordinates[0]
+    lng = (box[0][0] + box[1][0]) / 2
+    lat = (box[1][1] + box[2][1]) / 2
+    address = tweet.place.attributes.street_address
+    location = tweet.place.full_name
+    geo = 'ST_SetSRID(ST_Point(' + lng + ',' + lat + '),4326)'
+  }
+
+  // Use exact coordinates if provided.
+  if (tweet.coordinates) {
+    geo = 'ST_SetSRID(ST_Point(' + tweet.coordinates.coordinates[0] + ',' + tweet.coordinates.coordinates[1] + '),4326)'
+  }
+  // There is a tweet.geo field but it is deprecated.
+
+  // Do not proceed if there is not a point
+  if (!geo) return
+
+  // NOTE: sometimes the points come back as [0,0] which CartoDB will issue an error on
+  // console.log('[Twitter]', JSON.stringify(tweet.coordinates))
+
+  var cartoSQL = "INSERT INTO {table} (the_geom, description, identifier, location_address, location_name, percent_full, source, source_created_at, username) VALUES ({geo},'{description}','{identifier}','{location_address}','{location_name}',{percent_full},'twitter','{source_created_at}','{username}')"
+  console.log('[Twitter]', tweet.user.screen_name, tweet.id_str, tweet.text)
+
+  client.query(cartoSQL, {
+    table: CARTODB_TABLE,
+    geo: geo,
+    description: tweet.text.replace(/'/g, "''"),
+    identifier: tweet.id_str,
+    location_address: address || 'null',
+    location_name: location || 'null',
+    percent_full: getPercentFromText(tweet.text),
+    source_created_at: tweet.created_at,
+    username: tweet.user.screen_name
+  }, function (err, data) {
+    if (err) {
+      // 'identifier' is a UNIQUE column, so errors will occur if you add the same one
+      // console.log('[CartoDB] error performing SQL query:', err)
+    } else if (data.total_rows) {
+      console.log('[Twitter] ' + data.total_rows + ' rows affected')
+    }
+  })
 }
